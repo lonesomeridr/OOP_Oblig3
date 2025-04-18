@@ -13,9 +13,11 @@ class SerialReader(QThread):
     error      = pyqtSignal(str)
 
     def __init__(self, conn):
-        super().__init__(daemon=True)
+        super().__init__()
+        self.setTerminationEnabled(True)
         self.conn = conn
         self._run = True
+
 
     def run(self):
         while self._run:
