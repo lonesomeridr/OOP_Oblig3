@@ -10,7 +10,8 @@ import time
 import json
 from typing import Optional
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox)
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox
+)
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 # Qt‑signal type import for bedre type‑hints
@@ -70,6 +71,7 @@ class LiveTab(QWidget):
         self.MAX_POINTS = 30  # antall punkt som beholdes i grafen
 
         # Koble signal → slot
+        self.last_js = 0
         self.serial_reader.data_ready.connect(self._update_from_packet)
 
     # ------------------------------------------------------------------
@@ -148,6 +150,9 @@ class LiveTab(QWidget):
         Plotly.restyle('plot', {{visible:'{vis_ay}'}},  [2]);
         Plotly.restyle('plot', {{visible:'{vis_az}'}},  [3]);
         """
+        if time.time() - self.last_js < 0.2:   # max 5 Hz
+            return
+        self.last_js = time.time()
         self.plot_view.page().runJavaScript(js)
 
         # ----------------- DB‑logging (valgfritt) ------------
