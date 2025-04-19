@@ -1,31 +1,50 @@
 """
-Super‑enkel DB‑wrapper. Ingen ORM – bare rå INSERT/SELECT.
+DB wrapper for snake_case‑skjemaet.
 """
-import pymysql
+import time, pymysql
+from pymysql.err import OperationalError, InterfaceError
 from utils.config import DB_CFG
 from utils.logger import log
 
+RETRY = 3
+T_TEMP  = "temperature_readings"
+T_ACCEL = "acceleration_readings"
+
 class DB:
     def __init__(self):
-        self.cnx = pymysql.connect(**DB_CFG)
-        self.cur = self.cnx.cursor()
+        self._connect()
 
-    # ---------- INSERT ---------- #
-    def insert_temperature(self, sensor_id, temp):
-        self.cur.execute(
-            "INSERT INTO temperature_readings(sensor_id, temperature) VALUES (%s, %s)",
-            (sensor_id, temp))
-        self.cnx.commit()
+    # ---------- insert ---------- #
+    def insert_temperature(self, sensor_id:int, temp:float):
+        self._exec(f"INSERT INTO {T_TEMP}(sensor_id,temperature) VALUES (%s,%s)",
+                   (sensor_id,temp))
 
-    def insert_accel(self, sensor_id, x, y, z):
-        self.cur.execute(
-            "INSERT INTO acceleration_readings(sensor_id,x,y,z) VALUES (%s,%s,%s,%s)",
-            (sensor_id, x, y, z))
-        self.cnx.commit()
+    def insert_accel(self, sensor_id:int, x:float,y:float,z:float):
+        self._exec(
+            f"INSERT INTO {T_ACCEL}(sensor_id,x,y,z) VALUES (%s,%s,%s,%s)",
+            (sensor_id,x,y,z)
+        )
 
-    # ---------- SELECT ---------- #
-    def fetch_last_hours(self, table, hours=1):
-        self.cur.execute(
-            f"SELECT * FROM {table} WHERE timestamp >= NOW()-INTERVAL %s HOUR",
-            (hours,))
-        return self.cur.fetchall()
+    # ---------- intern ---------- #
+    def _connect(self):
+        while True:
+            try:
+                self.cnx = pymysql.connect(**DB_CFG, autocommit=True)
+                self.cur = self.cnx.cursor()
+                log("DB connected")
+                return
+            except Exception as exc:
+                log(f"DB connect failed: {exc} – retrying in {RETRY}s")
+                time.sleep(RETRY)
+
+    def _exec(self, sql:str, params:tuple):
+        try:
+            self.cur.execute(sql, params)
+        except (OperationalError, InterfaceError):
+            self._connect()
+            try:
+                self.cur.execute(sql, params)
+            except Exception as exc:
+                log(f"DB exec error after reconnect: {exc}")
+        except Exception as exc:
+            log(f"DB exec error: {exc}")
