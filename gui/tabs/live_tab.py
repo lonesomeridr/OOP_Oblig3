@@ -1,163 +1,175 @@
 from __future__ import annotations
-
 """
-Live‑fanen: sanntidsvisning av verdier som kommer fra SerialReader.
-Viser både numeriske labels og en Plotly‑graf som ruller.
-DB‑objekt er valgfritt – hvis det gis logges data automatisk.
+LiveTab v3 – polish per 2025‑04‑19 notes (composite tile fix)
+• Wider, fixed‑width value tiles
+• Combined Acceleration tile with x/y/z sub‑values
+• Temperature y‑axis fixed 15–30 °C, axes labelled
+• Graphs scroll smoothly (sliding window 60 s)
 """
 
 import time
-import json
-from typing import Optional
+from typing import Optional, Tuple
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSizePolicy
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
-# Qt‑signal type import for bedre type‑hints
-from PyQt6.QtCore import pyqtSignal  # only for typing, not used directly
-
+DARK_BG  = "#121212"
+CARD_BG  = "#1e1e1e"
+TEMP_COL = "#ffcc00"
+ACC_COLS = {"x": "#3fa7d6", "y": "#bada55", "z": "#f17c67"}
+WINDOW_SECONDS = 60  # seconds
 
 class LiveTab(QWidget):
-    """Rask og enkel sanntids‑GUI‑fane."""
-
-    # ---------------------------------------------------------------------
-    # API
-    # ---------------------------------------------------------------------
     def __init__(self, serial_reader, db: Optional[object] = None):
         super().__init__()
-        self.serial_reader = serial_reader  # SerialReader‑instans med signalet data_ready
-        self.db = db                        # DB‑wrapper (kan være None)
+        self.db = db
+        self.last_js = 0.0
+        self.start = time.time()
+        self.MAX_POINTS = 300
 
-        # --------------------------------------------------
-        # GUI‑layout
-        # --------------------------------------------------
-        main_layout = QVBoxLayout()
+        root = QVBoxLayout(self)
+        root.setContentsMargins(8,8,8,8)
+        self.setStyleSheet(f"background:{DARK_BG};color:#e0e0e0;")
 
-        # --- Dashboard (numeriske verdier) ---
-        dashboard = QHBoxLayout()
-        self.temp_label = QLabel("Temperature: -- °C")
-        self.ax_label = QLabel("Accel X: -- m/s²")
-        self.ay_label = QLabel("Accel Y: -- m/s²")
-        self.az_label = QLabel("Accel Z: -- m/s²")
-        for lbl in (self.temp_label, self.ax_label, self.ay_label, self.az_label):
-            lbl.setStyleSheet("font-size:14pt; font-weight:bold;")
-            dashboard.addWidget(lbl)
+        # --------------- value tiles ---------------
+        tile_row = QHBoxLayout()
+        tile_row.setSpacing(16)
+        self.tiles: dict[str, QLabel] = {}
 
-        # --- Checkboxes for hvilke spor som skal vises ---
-        cb_layout = QHBoxLayout()
-        self.cb_temp = QCheckBox("Temp"); self.cb_temp.setChecked(True)
-        self.cb_ax = QCheckBox("Acc X"); self.cb_ax.setChecked(True)
-        self.cb_ay = QCheckBox("Acc Y"); self.cb_ay.setChecked(True)
-        self.cb_az = QCheckBox("Acc Z"); self.cb_az.setChecked(True)
-        cb_layout.addWidget(QLabel("Show:"))
-        for cb in (self.cb_temp, self.cb_ax, self.cb_ay, self.cb_az):
-            cb_layout.addWidget(cb)
+        # Temperature tile
+        temp_frame, temp_lbl = self._make_tile('Temperature', TEMP_COL, fixed_w=200)
+        self.tiles['Temperature'] = temp_lbl
+        tile_row.addWidget(temp_frame)
 
-        # --- Plotly‑view ---
-        self.plot_view = QWebEngineView()
-        self._load_initial_chart()
+        # Acceleration composite tile
+        acc_frame = QFrame()
+        acc_frame.setFixedWidth(300)
+        acc_frame.setStyleSheet(f"background:{CARD_BG};border-radius:10px;")
+        acc_layout = QVBoxLayout(acc_frame)
+        acc_layout.setContentsMargins(8,8,8,8)
+        title = QLabel("Acceleration", alignment=Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size:11pt; margin:0px; padding-bottom:2px;")
+        acc_layout.addWidget(title)
+        # sub-values row
+        sub_row = QHBoxLayout()
+        sub_row.setSpacing(8)
+        for axis in ('x', 'y', 'z'):
+            lbl = QLabel("--", alignment=Qt.AlignmentFlag.AlignCenter)
+            lbl.setStyleSheet(f"font-size:22pt; font-weight:600; color:{ACC_COLS[axis]};")
+            self.tiles[axis] = lbl
+            sub_row.addWidget(lbl)
+        acc_layout.addLayout(sub_row)
+        tile_row.addWidget(acc_frame)
 
-        # Sammensett layout
-        main_layout.addLayout(dashboard)
-        main_layout.addLayout(cb_layout)
-        main_layout.addWidget(self.plot_view)
-        self.setLayout(main_layout)
+        tile_row.addStretch(1)
+        root.addLayout(tile_row)
 
-        # --------------------------------------------------
-        # Internt
-        # --------------------------------------------------
-        self.start_time = time.time()
-        self.MAX_POINTS = 30  # antall punkt som beholdes i grafen
+        # --------------- plots ---------------
+        plot_row = QHBoxLayout()
+        plot_row.setSpacing(8)
+        self.temp_view = QWebEngineView()
+        self.acc_view  = QWebEngineView()
+        for widget in (self.temp_view, self.acc_view):
+            widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            plot_row.addWidget(widget)
+        root.addLayout(plot_row)
 
-        # Koble signal → slot
-        self.last_js = 0
-        self.serial_reader.data_ready.connect(self._update_from_packet)
+        self._init_plots()
+        serial_reader.data_ready.connect(self._update)
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-    def _load_initial_chart(self) -> None:
-        """Første tomme Plotly‑graf med fire spor."""
-        html = """
-        <html>
-        <head><script src="https://cdn.plot.ly/plotly-latest.min.js"></script></head>
-        <body>
-          <div id="plot"></div>
-          <script>
-            var data = [
-              {x: [], y: [], mode:'lines+markers', name:'Temperature (°C)', visible:true},
-              {x: [], y: [], mode:'lines+markers', name:'Acceleration X (m/s²)', visible:true},
-              {x: [], y: [], mode:'lines+markers', name:'Acceleration Y (m/s²)', visible:true},
-              {x: [], y: [], mode:'lines+markers', name:'Acceleration Z (m/s²)', visible:true}
-            ];
-            var layout = {
-              title: 'Real‑Time Sensor Data',
-              xaxis: {title: 'Time (s)'},
-              yaxis: {title: 'Value'},
-              template: 'plotly_dark'
-            };
-            Plotly.newPlot('plot', data, layout);
-          </script>
-        </body>
-        </html>
+    def _make_tile(self, label: str, color: str, fixed_w: int) -> Tuple[QFrame, QLabel]:
+        frame = QFrame()
+        frame.setFixedWidth(fixed_w)
+        frame.setStyleSheet(f"background:{CARD_BG};border-radius:10px;")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(8,8,8,8)
+        title_lbl = QLabel(label, alignment=Qt.AlignmentFlag.AlignCenter)
+        title_lbl.setStyleSheet("font-size:11pt;")
+        val_lbl = QLabel("--", alignment=Qt.AlignmentFlag.AlignCenter)
+        val_lbl.setStyleSheet(f"font-size:24pt;font-weight:600;color:{color}; margin-top:2px;")
+        layout.addWidget(title_lbl)
+        layout.addWidget(val_lbl)
+        return frame, val_lbl
+
+    def _html(self, body: str) -> str:
+        return (
+            f"<html><head><script src='https://cdn.plot.ly/plotly-2.31.1.min.js'></script></head>"
+            f"<body style='margin:0;background:{DARK_BG};'>{body}</body></html>"
+        )
+
+    def _init_plots(self):
+        temp_body = f"""
+        <div id='t' style='width:100%;height:100%'></div>
+        <script>
+        var layout={{template:'plotly_dark',paper_bgcolor:'{DARK_BG}',plot_bgcolor:'{DARK_BG}',
+                     margin:{{l:50,r:10,t:40,b:40}},title:'Temperature',
+                     xaxis:{{title:'Time (s)'}}, yaxis:{{title:'°C',range:[15,30]}}}};
+        Plotly.newPlot('t', [{{x:[],y:[],name:'Temp',line:{{color:'{TEMP_COL}'}}}}], layout);
+        </script>
         """
-        self.plot_view.setHtml(html)
+        self.temp_view.setHtml(self._html(temp_body))
 
-    # ------------------------------------------------------------------
-    def _update_from_packet(self, pkt: dict) -> None:
-        """Slot som kalles hver gang SerialReader emitterer data_ready."""
-        now_s = round(time.time() - self.start_time, 1)
-
-        # ----------------- Parse temperatur -----------------
-        temp_v = None
-        if (t := pkt.get("temperature")):
-            temp_v = t.get("temperature")
-            if temp_v is not None:
-                self.temp_label.setText(f"Temperature: {temp_v:.2f} °C")
-        else:
-            self.temp_label.setText("Temperature: -- °C")
-
-        # ----------------- Parse akselerasjon --------------
-        ax = ay = az = None
-        if (a := pkt.get("acceleration")):
-            ax, ay, az = a.get("x"), a.get("y"), a.get("z")
-        self.ax_label.setText(f"Accel X: {ax:.2f} m/s²" if ax is not None else "Accel X: -- m/s²")
-        self.ay_label.setText(f"Accel Y: {ay:.2f} m/s²" if ay is not None else "Accel Y: -- m/s²")
-        self.az_label.setText(f"Accel Z: {az:.2f} m/s²" if az is not None else "Accel Z: -- m/s²")
-
-        # ----------------- Oppdater Plotly -----------------
-        # Null‑safe verdier (Plotly aksepterer 'null')
-        temp_js = json.dumps(temp_v)  # gir f.eks. "null" eller 23.4
-        ax_js = json.dumps(ax)
-        ay_js = json.dumps(ay)
-        az_js = json.dumps(az)
-
-        vis_temp = "true" if self.cb_temp.isChecked() and temp_v is not None else "legendonly"
-        vis_ax = "true" if self.cb_ax.isChecked() and ax is not None else "legendonly"
-        vis_ay = "true" if self.cb_ay.isChecked() and ay is not None else "legendonly"
-        vis_az = "true" if self.cb_az.isChecked() and az is not None else "legendonly"
-
-        js = f"""
-        var t={now_s};
-        Plotly.extendTraces('plot', {{
-            x: [[t],[t],[t],[t]],
-            y: [[{temp_js}],[{ax_js}],[{ay_js}],[{az_js}]]
-        }}, [0,1,2,3], {self.MAX_POINTS});
-
-        Plotly.restyle('plot', {{visible:'{vis_temp}'}}, [0]);
-        Plotly.restyle('plot', {{visible:'{vis_ax}'}},  [1]);
-        Plotly.restyle('plot', {{visible:'{vis_ay}'}},  [2]);
-        Plotly.restyle('plot', {{visible:'{vis_az}'}},  [3]);
+        accel_body = f"""
+        <div id='a' style='width:100%;height:100%'></div>
+        <script>
+        var layout={{template:'plotly_dark',paper_bgcolor:'{DARK_BG}',plot_bgcolor:'{DARK_BG}',
+                     margin:{{l:50,r:10,t:40,b:40}},title:'Acceleration',
+                     xaxis:{{title:'Time (s)'}}, yaxis:{{title:'m/s²'}}}};
+        Plotly.newPlot('a', [
+          {{x:[],y:[],name:'Ax',line:{{color:'{ACC_COLS['x']}'}}}},
+          {{x:[],y:[],name:'Ay',line:{{color:'{ACC_COLS['y']}'}}}},
+          {{x:[],y:[],name:'Az',line:{{color:'{ACC_COLS['z']}'}}}}
+        ], layout);
+        </script>
         """
-        if time.time() - self.last_js < 0.2:   # max 5 Hz
+        self.acc_view.setHtml(self._html(accel_body))
+
+    def _update(self, pkt: dict):
+        t = round(time.time() - self.start, 2)
+        temp = pkt.get('temperature', {}).get('temperature')
+        ax = pkt.get('acceleration', {}).get('x')
+        ay = pkt.get('acceleration', {}).get('y')
+        az = pkt.get('acceleration', {}).get('z')
+
+        if temp is not None:
+            self.tiles['Temperature'].setText(f"{temp:.1f}°C")
+        if ax is not None:
+            self.tiles['x'].setText(f"{ax:.2f}")
+        if ay is not None:
+            self.tiles['y'].setText(f"{ay:.2f}")
+        if az is not None:
+            self.tiles['z'].setText(f"{az:.2f}")
+
+        # throttle
+        if time.time() - self.last_js < 0.15:
             return
         self.last_js = time.time()
-        self.plot_view.page().runJavaScript(js)
 
-        # ----------------- DB‑logging (valgfritt) ------------
+        # Extend and slide temp
+        if temp is not None:
+            js = (
+                f"Plotly.extendTraces('t',{{x:[[{round(time.time()-self.start,2)}]],y:[[{temp}]]}},[0],{self.MAX_POINTS});"
+                f"Plotly.relayout('t',{{xaxis:{{range:[Math.max({round(time.time()-self.start,2)}-{WINDOW_SECONDS},0),{round(time.time()-self.start,2)}]}}}});"
+            )
+            self.temp_view.page().runJavaScript(js)
+
+        # Extend and slide accel
+        if None not in (ax, ay, az):
+            js = (
+                f"Plotly.extendTraces('a',{{x:[[{round(time.time()-self.start,2)}],[{round(time.time()-self.start,2)}],[{round(time.time()-self.start,2)}]],"
+                f"y:[[{ax}],[{ay}],[{az}]]}},[0,1,2],{self.MAX_POINTS});"
+                f"Plotly.relayout('a',{{xaxis:{{range:[Math.max({round(time.time()-self.start,2)}-{WINDOW_SECONDS},0),{round(time.time()-self.start,2)}]}}}});"
+            )
+            self.acc_view.page().runJavaScript(js)
+
+        # optional DB log
         if self.db:
-            if temp_v is not None:
-                self.db.insert_temperature(pkt['temperature']['sensor_id'], temp_v)
-            if ax is not None:
-                self.db.insert_accel(pkt['acceleration']['sensor_id'], ax, ay, az)
+            try:
+                if temp is not None:
+                    self.db.insert_temperature(pkt['temperature']['sensor_id'], temp)
+                if None not in (ax, ay, az):
+                    self.db.insert_accel(pkt['acceleration']['sensor_id'], ax, ay, az)
+            except Exception as exc:
+                print(f"DB error: {exc}")

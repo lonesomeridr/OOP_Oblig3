@@ -1,106 +1,95 @@
 from __future__ import annotations
 """
-Innstillings‑fane: velg COM‑port, Start/Stop og sett GatherFreq.
-Kobler automatisk til **COM7** (hvis den finnes) ellers første tilgjengelige
-port – og sender «START» umiddelbart, slik at LiveTab mottar data uten
-brukerklikk. Brukeren kan fortsatt velge andre porter fra dropdownen.
+SettingsTab v3 – enkel listeoppsett
+• Live data controls (Start/Stop) øverst
+• GatherFreq under
+• COM‑port rett under GatherFreq
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLabel,
-    QPushButton, QSpinBox
+    QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QComboBox, QPushButton, QSpinBox, QSizePolicy
 )
+from PyQt6.QtCore import Qt
 from utils.logger import log
 
-DEFAULT_PORT = "COM7"  # endre her om du får nytt kort / portnummer
-
+DEFAULT_PORT = "COM7"
 
 class SettingsTab(QWidget):
-    """Brukes mot en felles SerialConnection‑instans."""
-
+    """Settingstab for SerialConnection med tre seksjoner i én kolonne."""
     def __init__(self, serial_conn):
         super().__init__()
         self.conn = serial_conn
 
-        # --------------------------------------------------
-        # COM‑port‑velger
-        # --------------------------------------------------
+        # Root layout: vertikal stub
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(12,12,12,12)
+        main_layout.setSpacing(20)
+
+        # 1) Live-data controls
+        live_layout = QHBoxLayout()
+        live_layout.setSpacing(10)
+        lbl_live = QLabel("Live data:")
+        lbl_live.setFixedWidth(100)
+        self.start_btn = QPushButton("Start"); self.start_btn.setFixedSize(80,30)
+        self.stop_btn  = QPushButton("Stop");  self.stop_btn.setFixedSize(80,30)
+        live_layout.addWidget(lbl_live)
+        live_layout.addWidget(self.start_btn)
+        live_layout.addWidget(self.stop_btn)
+        live_layout.addStretch(1)
+        main_layout.addLayout(live_layout)
+
+        # 2) Gather frequency
+        freq_layout = QHBoxLayout()
+        freq_layout.setSpacing(10)
+        lbl_freq = QLabel("GatherFreq:")
+        lbl_freq.setFixedWidth(100)
+        self.freq_spin = QSpinBox(); self.freq_spin.setRange(1,10); self.freq_spin.setValue(5)
+        self.freq_spin.setFixedSize(60,30)
+        self.set_btn = QPushButton("Set"); self.set_btn.setFixedSize(60,30)
+        freq_layout.addWidget(lbl_freq)
+        freq_layout.addWidget(self.freq_spin)
+        freq_layout.addWidget(self.set_btn)
+        freq_layout.addStretch(1)
+        main_layout.addLayout(freq_layout)
+
+        # 3) COM-port selector (moved under GatherFreq)
         com_layout = QHBoxLayout()
-        self.port_combo = QComboBox()
-        ports = self._refresh_ports()          # fyll dropdown
+        com_layout.setSpacing(10)
+        lbl_com = QLabel("COM-port:")
+        lbl_com.setFixedWidth(100)
+        self.port_combo = QComboBox(); self.port_combo.setFixedSize(120,30)
+        self.port_combo.addItems([f"COM{i}" for i in range(1,10)])
         self.port_combo.currentTextChanged.connect(self._on_port_change)
         self.status_lbl = QLabel("Not connected")
+        com_layout.addWidget(lbl_com)
         com_layout.addWidget(self.port_combo)
         com_layout.addWidget(self.status_lbl)
+        com_layout.addStretch(1)
+        main_layout.addLayout(com_layout)
 
-        # --------------------------------------------------
-        # Kontrollknapper
-        # --------------------------------------------------
-        ctl_layout = QHBoxLayout()
-        self.start_btn = QPushButton("Start")
-        self.stop_btn = QPushButton("Stop")
-        ctl_layout.addWidget(self.start_btn)
-        ctl_layout.addWidget(self.stop_btn)
-
-        # GatherFreq‑kontroll
-        freq_lbl = QLabel("GatherFreq:")
-        self.freq_spin = QSpinBox(); self.freq_spin.setRange(1, 10); self.freq_spin.setValue(5)
-        set_freq_btn = QPushButton("Set")
-        ctl_layout.addWidget(freq_lbl)
-        ctl_layout.addWidget(self.freq_spin)
-        ctl_layout.addWidget(set_freq_btn)
-
-        # --------------------------------------------------
         # Signals
-        # --------------------------------------------------
-        self.start_btn.clicked.connect(lambda: self.conn.send_json({"Command": "START"}))
-        self.stop_btn.clicked.connect(lambda: self.conn.send_json({"Command": "STOP"}))
-        set_freq_btn.clicked.connect(self._send_freq)
+        self.start_btn.clicked.connect(lambda: self.conn.send_json({"Command":"START"}))
+        self.stop_btn.clicked.connect(lambda: self.conn.send_json({"Command":"STOP"}))
+        self.set_btn.clicked.connect(self._send_freq)
 
-        # --------------------------------------------------
-        # Hoved‑layout
-        # --------------------------------------------------
-        main_lay = QVBoxLayout()
-        main_lay.addLayout(com_layout)
-        main_lay.addLayout(ctl_layout)
-        self.setLayout(main_lay)
+        # Auto-connect default port
+        ports = [self.port_combo.itemText(i) for i in range(self.port_combo.count())]
+        default = DEFAULT_PORT if DEFAULT_PORT in ports else ports[0]
+        self.port_combo.setCurrentText(default)
+        self._on_port_change(default)
 
-        # --------------------------------------------------
-        # Auto‑connect + auto‑start
-        # --------------------------------------------------
-        chosen = None
-        if DEFAULT_PORT in ports:
-            chosen = DEFAULT_PORT
-        elif ports:
-            chosen = ports[0]
-
-        if chosen:
-            # setCurrentText triggerer signal, men bare hvis teksten endres;
-            # for sikkerhets skyld kaller vi _on_port_change manuelt etterpå.
-            self.port_combo.setCurrentText(chosen)
-            self._on_port_change(chosen)
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-    def _refresh_ports(self):
-        """Returnerer liste over tilgjengelige porter og fyller dropdown."""
-        ports = self.conn.list_ports() or []
-        self.port_combo.clear()
-        self.port_combo.addItems(ports or ["<ingen>"])
-        return ports
-
-    def _on_port_change(self, port: str):
-        if "<ingen>" in port:
+    def _on_port_change(self, port: str) -> None:
+        if not port:
+            self.status_lbl.setText("No port")
             return
         try:
             self.conn.open_port(port)
             self.status_lbl.setText(f"Connected to {port}")
-            # Start datainnsamling umiddelbart for LiveTab
-            self.conn.send_json({"Command": "START"})
-        except Exception as exc:
+            self.conn.send_json({"Command":"START"})
+        except Exception as e:
             self.status_lbl.setText("Failed")
-            log(f"Serial connect error: {exc}")
+            log(f"Serial connect error: {e}")
 
-    def _send_freq(self):
+    def _send_freq(self) -> None:
         self.conn.send_json({"GatherFreq": self.freq_spin.value()})
