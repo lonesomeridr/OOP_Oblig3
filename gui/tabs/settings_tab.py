@@ -67,6 +67,7 @@ class SettingsTab(QWidget):
         com_layout.addWidget(self.status_lbl)
         com_layout.addStretch(1)
         main_layout.addLayout(com_layout)
+        main_layout.addStretch(1)
 
         # Signals
         self.start_btn.clicked.connect(lambda: self.conn.send_json({"Command":"START"}))
