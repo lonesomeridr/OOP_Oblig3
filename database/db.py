@@ -31,15 +31,16 @@ class DB:
     # ---------- FETCH HISTORY ---------- #
     def fetch_last_hours(self, table: str, hours: int = 1) -> list[tuple]:
         """
-        Return all rows from `table` whose `timestamp` is within the last `hours` hours,
-        ordered ascending by timestamp. Returns empty list on error.
+        Return all rows from `table` whose `created_at` timestamp
+        is within the last `hours` hours, ordered ascending.
+        Returns an empty list on error.
         """
         try:
             sql = (
                 f"SELECT * "
                 f"FROM {table} "
-                f"WHERE timestamp >= NOW() - INTERVAL %s HOUR "
-                f"ORDER BY timestamp ASC"
+                f"WHERE created_at >= NOW() - INTERVAL %s HOUR "
+                f"ORDER BY created_at ASC"
             )
             self.cur.execute(sql, (hours,))
             return self.cur.fetchall()
