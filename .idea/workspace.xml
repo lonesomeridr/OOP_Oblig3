@@ -6,11 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="1870e969-72b7-407c-9ccc-4158934b48d8" name="Changes" comment="Working history matplotlib prototype">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui/tabs/config_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/config_tab.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui/tabs/history_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/history_tab.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/serial_io/connection.py" beforeDir="false" afterPath="$PROJECT_DIR$/serial_io/connection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/serial_io/worker.py" beforeDir="false" afterPath="$PROJECT_DIR$/serial_io/worker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,18 +53,18 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.live_tab.executor": "Run",
-    "Python.main.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "rollback",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/gdrive/0-Skole 24-25/2-Objektorientert programmering/Prosjektfiler/OOP_Oblig3/main.py",
-    "settings.editor.selected.configurable": "com.github.copilot.settings.ApplicationConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.live_tab.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;rollback&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/gdrive/0-Skole 24-25/2-Objektorientert programmering/Prosjektfiler/OOP_Oblig3/main.py&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.github.copilot.settings.ApplicationConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="OOP_Oblig3" />
