@@ -4,13 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1870e969-72b7-407c-9ccc-4158934b48d8" name="Changes" comment="Rollback to working version">
+    <list default="true" id="1870e969-72b7-407c-9ccc-4158934b48d8" name="Changes" comment="Working history matplotlib prototype">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/main_window.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gui/tabs/config_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/config_tab.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gui/tabs/history_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/history_tab.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui/tabs/settings_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/settings_tab.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/serial_io/connection.py" beforeDir="false" afterPath="$PROJECT_DIR$/serial_io/connection.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/serial_io/worker.py" beforeDir="false" afterPath="$PROJECT_DIR$/serial_io/worker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -176,7 +175,23 @@
       <option name="project" value="LOCAL" />
       <updated>1745174363847</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Semi-working history and sensor config">
+      <option name="closed" value="true" />
+      <created>1745238726665</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1745238726665</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Working history matplotlib prototype">
+      <option name="closed" value="true" />
+      <created>1745238925037</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1745238925037</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -186,6 +201,8 @@
     <MESSAGE value="More polished live view and basic working settings tab" />
     <MESSAGE value="New branch with updated DB, connection error" />
     <MESSAGE value="Rollback to working version" />
-    <option name="LAST_COMMIT_MESSAGE" value="Rollback to working version" />
+    <MESSAGE value="Semi-working history and sensor config" />
+    <MESSAGE value="Working history matplotlib prototype" />
+    <option name="LAST_COMMIT_MESSAGE" value="Working history matplotlib prototype" />
   </component>
 </project>

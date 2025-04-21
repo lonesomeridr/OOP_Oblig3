@@ -1,33 +1,46 @@
-import json, time, traceback
-import serial
+import json
+import traceback
 from PyQt6.QtCore import QThread, pyqtSignal
+import serial.serialutil
 
 class SerialReader(QThread):
     data_ready = pyqtSignal(dict)
-    error      = pyqtSignal(str)
+    error      = pyqtSignal(Exception)
 
     def __init__(self, conn):
         super().__init__()
         self.conn = conn
-        self._run = True
+        self.last_packet: dict | None = None
+        self._running = True
 
     def run(self):
-        while self._run:
+        while self._running:
             try:
                 raw = self.conn.readline()
                 if not raw:
-                    time.sleep(0.01)
                     continue
-                pkt = json.loads(raw)
+                try:
+                    pkt = json.loads(raw.decode("utf-8").strip())
+                except Exception:
+                    # skip bad lines
+                    continue
+
+                self.last_packet = pkt
                 self.data_ready.emit(pkt)
-            except Exception as exc:
-                # quietly ignore invalid-handle ClearCommError
-                if isinstance(exc, serial.SerialException) and "ClearCommError" in str(exc):
-                    time.sleep(0.05)
+
+            except serial.serialutil.SerialException as ex:
+                # on Windows you sometimes get ClearCommError handle invalid
+                if "ClearCommError" in str(ex):
+                    # just swallow it
                     continue
-                tb = traceback.format_exc(limit=1)
-                self.error.emit(f"SerialReader error: {exc}\n{tb}")
-                time.sleep(0.2)
+                # all other serial errors bubble up
+                self.error.emit(ex)
+                break
+            except Exception as ex:
+                # any other surprise
+                self.error.emit(ex)
+                break
 
     def stop(self):
-        self._run = False
+        self._running = False
+        self.wait()

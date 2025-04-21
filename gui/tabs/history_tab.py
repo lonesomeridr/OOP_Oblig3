@@ -1,21 +1,22 @@
 from __future__ import annotations
-from datetime import datetime
-import traceback
-
+import json, time, traceback
+from typing import Optional
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QSpinBox, QPushButton
+    QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QSpinBox, QPushButton
 )
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 from utils.logger import log
+
+DARK_BG  = "#121212"
+TEMP_COL = "#ffcc00"
+ACC_COLS = {"x":"#3fa7d6","y":"#bada55","z":"#f17c67"}
 
 class HistoryTab(QWidget):
     """
-    Simple history viewer using matplotlib.
-    Select last N hours and click Load to plot Temperature & Acceleration.
+    History view using Plotly inside QWebEngineView.
     """
-    def __init__(self, db):
+    def __init__(self, db: Optional[object]):
         super().__init__()
         self.db = db
 
@@ -31,25 +32,29 @@ class HistoryTab(QWidget):
         ctrl.addWidget(load_btn)
         ctrl.addStretch(1)
 
-        # --- Figure for Temperature ---
-        self.temp_fig = Figure(figsize=(5, 3))
-        self.temp_ax  = self.temp_fig.add_subplot(111)
-        self.temp_canvas = FigureCanvas(self.temp_fig)
-
-        # --- Figure for Acceleration ---
-        self.acc_fig = Figure(figsize=(5, 3))
-        self.acc_ax  = self.acc_fig.add_subplot(111)
-        self.acc_canvas = FigureCanvas(self.acc_fig)
+        # --- Plot widgets ---
+        self.temp_view = QWebEngineView()
+        self.acc_view  = QWebEngineView()
 
         # --- Layout ---
         root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
+        root.setContentsMargins(8,8,8,8)
+        root.setSpacing(8)
         root.addLayout(ctrl)
-
-        root.addWidget(self.temp_canvas)
-        root.addWidget(self.acc_canvas)
+        plots = QHBoxLayout()
+        plots.setSpacing(8)
+        plots.addWidget(self.temp_view,1)
+        plots.addWidget(self.acc_view,1)
+        root.addLayout(plots)
 
         load_btn.clicked.connect(self._load_history)
+        # initial blank pages
+        self._set_blank(self.temp_view)
+        self._set_blank(self.acc_view)
+
+    def _set_blank(self, view: QWebEngineView):
+        html = f"<html><body style='margin:0;background:{DARK_BG};'></body></html>"
+        view.setHtml(html)
 
     def _load_history(self):
         if not self.db:
@@ -58,43 +63,81 @@ class HistoryTab(QWidget):
 
         hrs = self.hours_spin.value()
         try:
-            # Fetch from your tables. Adjust the timestamp index if yours differs.
+            # fetch rows
             temp_rows = self.db.fetch_last_hours("temperature_readings", hrs)
             acc_rows  = self.db.fetch_last_hours("acceleration_readings", hrs)
 
-            # Extract data
-            # Assumes temp_rows: (id, sensor_id, temperature, timestamp)
-            times_t = [row[3] for row in temp_rows]
-            vals_t  = [row[2] for row in temp_rows]
+            # build JS arrays
+            # temp_rows: id, sensor_id, temperature, created_at
+            times_t = [int(time.mktime(r[3].timetuple())*1000) for r in temp_rows]
+            vals_t  = [r[2] for r in temp_rows]
 
-            # Assumes acc_rows: (id, sensor_id, x, y, z, timestamp)
-            times_a = [row[5] for row in acc_rows]
-            xs = [row[2] for row in acc_rows]
-            ys = [row[3] for row in acc_rows]
-            zs = [row[4] for row in acc_rows]
+            # acc_rows: id, sensor_id, x, y, z, created_at
+            times_a = [int(time.mktime(r[5].timetuple())*1000) for r in acc_rows]
+            xs      = [r[2] for r in acc_rows]
+            ys      = [r[3] for r in acc_rows]
+            zs      = [r[4] for r in acc_rows]
 
-            # --- Plot Temperature ---
-            self.temp_ax.clear()
-            self.temp_ax.plot(times_t, vals_t, marker='o', linestyle='-', color='orange')
-            self.temp_ax.set_title(f"Temperature (last {hrs}h)")
-            self.temp_ax.set_xlabel("Time")
-            self.temp_ax.set_ylabel("°C")
-            self.temp_fig.autofmt_xdate()
-            self.temp_canvas.draw()
+            # generate HTML+JS for Temp
+            temp_html = f"""
+            <html>
+            <head>
+              <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+            </head>
+            <body style="margin:0;background:{DARK_BG};">
+              <div id="plot_temp" style="width:100%;height:100%;"></div>
+              <script>
+                var trace = {{
+                  x: {json.dumps(times_t)},
+                  y: {json.dumps(vals_t)},
+                  mode: 'lines+markers',
+                  name: 'Temperature (°C)',
+                  line: {{color:'{TEMP_COL}'}}
+                }};
+                var layout = {{
+                  template:'plotly_dark',
+                  paper_bgcolor:'{DARK_BG}',
+                  plot_bgcolor:'{DARK_BG}',
+                  margin: {{l:40,r:10,t:40,b:40}},
+                  title: 'Temperature History ({hrs}h)',
+                  xaxis: {{title:'Time', type:'date'}},
+                  yaxis: {{title:'°C'}}
+                }};
+                Plotly.newPlot('plot_temp',[trace],layout);
+              </script>
+            </body>
+            </html>
+            """
+            self.temp_view.setHtml(temp_html)
 
-            # --- Plot Acceleration ---
-            self.acc_ax.clear()
-            self.acc_ax.plot(times_a, xs, label='Ax', color='skyblue')
-            self.acc_ax.plot(times_a, ys, label='Ay', color='limegreen')
-            self.acc_ax.plot(times_a, zs, label='Az', color='salmon')
-            self.acc_ax.set_title(f"Acceleration (last {hrs}h)")
-            self.acc_ax.set_xlabel("Time")
-            self.acc_ax.set_ylabel("m/s²")
-            self.acc_ax.legend()
-            self.acc_fig.autofmt_xdate()
-            self.acc_canvas.draw()
+            # generate HTML+JS for Accel
+            acc_html = f"""
+            <html>
+            <head>
+              <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+            </head>
+            <body style="margin:0;background:{DARK_BG};">
+              <div id="plot_acc" style="width:100%;height:100%;"></div>
+              <script>
+                var t1 = {{x:{json.dumps(times_a)}, y:{json.dumps(xs)}, mode:'lines', name:'Ax', line:{{color:'{ACC_COLS['x']}'}}}};
+                var t2 = {{x:{json.dumps(times_a)}, y:{json.dumps(ys)}, mode:'lines', name:'Ay', line:{{color:'{ACC_COLS['y']}'}}}};
+                var t3 = {{x:{json.dumps(times_a)}, y:{json.dumps(zs)}, mode:'lines', name:'Az', line:{{color:'{ACC_COLS['z']}'}}}};
+                var layout = {{
+                  template:'plotly_dark',
+                  paper_bgcolor:'{DARK_BG}',
+                  plot_bgcolor:'{DARK_BG}',
+                  margin: {{l:40,r:10,t:40,b:40}},
+                  title: 'Acceleration History ({hrs}h)',
+                  xaxis: {{title:'Time', type:'date'}},
+                  yaxis: {{title:'m/s²'}}
+                }};
+                Plotly.newPlot('plot_acc',[t1,t2,t3],layout);
+              </script>
+            </body>
+            </html>
+            """
+            self.acc_view.setHtml(acc_html)
 
         except Exception as exc:
-            # catch everything so it doesn't crash the app
             tb = traceback.format_exc(limit=1)
             log(f"HistoryTab load error: {exc}\n{tb}")
