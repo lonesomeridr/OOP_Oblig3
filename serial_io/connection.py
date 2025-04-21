@@ -1,35 +1,45 @@
-"""
-En enkel wrapper rundt pyserial – én port om gangen.
-"""
-
-from __future__ import annotations
 import json
-import serial, serial.tools.list_ports
-from utils.logger import log
+import serial
+import serial.tools.list_ports
 
-BAUD = 9600
+BAUD_RATE = 9600
 
 class SerialConnection:
-    def __init__(self) -> None:
+    def __init__(self):
         self.ser: serial.Serial | None = None
+        self.current_port: str | None = None
 
-    # ---------- Public API ---------- #
-    @staticmethod
-    def list_ports() -> list[str]:
+    def list_ports(self) -> list[str]:
         return [p.device for p in serial.tools.list_ports.comports()]
 
     def open_port(self, port: str) -> None:
-        if self.ser and self.ser.is_open:
-            self.ser.close()
-        # non‑blocking with 50 ms timeout
-        self.ser = serial.Serial(port=port, baudrate=BAUD, timeout=0.05)
-        log(f"Opened {port}")
+        # only re‑open (and print) if port really changes
+        if port == self.current_port and self.ser and self.ser.is_open:
+            return
 
-    def send_json(self, obj: dict) -> None:
-        if self.ser and self.ser.is_open:
-            self.ser.write((json.dumps(obj) + "\n").encode())
+        # close old if needed
+        if self.ser:
+            try:
+                self.ser.close()
+            except Exception:
+                pass
 
-    def readline(self) -> str | None:
-        if self.ser and self.ser.in_waiting:
-            return self.ser.readline().decode(errors="ignore").strip()
-        return None
+        # open new
+        try:
+            self.ser = serial.Serial(port, BAUD_RATE, timeout=1)
+            self.current_port = port
+            print(f"Opened {port}")
+        except serial.SerialException as ex:
+            print(f"Failed to open {port}: {ex}")
+            raise
+
+    def send_json(self, payload: dict) -> None:
+        if not (self.ser and self.ser.is_open):
+            raise serial.SerialException("Serial port not open")
+        raw = json.dumps(payload) + "\n"
+        self.ser.write(raw.encode("utf-8"))
+
+    def readline(self) -> bytes:
+        if not (self.ser and self.ser.in_waiting):
+            return b""
+        return self.ser.readline()
