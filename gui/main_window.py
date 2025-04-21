@@ -16,8 +16,8 @@ class MainWindow(QMainWindow):
         tabs = QTabWidget()
         tabs.addTab(LiveTab(serial_reader, db),     "Live")
         tabs.addTab(HistoryTab(db),                 "Historikk")
-        tabs.addTab(ConfigTab(serial_conn),         "Konfig")
-        tabs.addTab(SettingsTab(serial_conn),       "Innstillinger")
+        tabs.addTab(ConfigTab(serial_reader, serial_conn, db), "Konfig")
+        tabs.addTab(SettingsTab(serial_conn), "Innstillinger")
 
         self.setCentralWidget(tabs)
 

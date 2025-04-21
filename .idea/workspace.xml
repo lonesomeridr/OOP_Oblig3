@@ -4,12 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1870e969-72b7-407c-9ccc-4158934b48d8" name="Changes" comment="New branch with updated DB, connection error">
+    <list default="true" id="1870e969-72b7-407c-9ccc-4158934b48d8" name="Changes" comment="Rollback to working version">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/db.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/main_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui/tabs/config_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/config_tab.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui/tabs/history_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/history_tab.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gui/tabs/settings_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/settings_tab.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/serial_io/worker.py" beforeDir="false" afterPath="$PROJECT_DIR$/serial_io/worker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,7 +28,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="master" />
+        <entry key="$PROJECT_DIR$" value="db_fix" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -63,7 +65,7 @@
     "Python.main.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "db__fix",
+    "git-widget-placeholder": "rollback",
     "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "C:/gdrive/0-Skole 24-25/2-Objektorientert programmering/Prosjektfiler/OOP_Oblig3/main.py",
     "settings.editor.selected.configurable": "com.github.copilot.settings.ApplicationConfigurable"
@@ -166,7 +168,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745156228529</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Rollback to working version">
+      <option name="closed" value="true" />
+      <created>1745174363847</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1745174363847</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -175,6 +185,7 @@
     <MESSAGE value="Working live view and DB storage" />
     <MESSAGE value="More polished live view and basic working settings tab" />
     <MESSAGE value="New branch with updated DB, connection error" />
-    <option name="LAST_COMMIT_MESSAGE" value="New branch with updated DB, connection error" />
+    <MESSAGE value="Rollback to working version" />
+    <option name="LAST_COMMIT_MESSAGE" value="Rollback to working version" />
   </component>
 </project>
