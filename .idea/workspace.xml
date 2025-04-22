@@ -4,8 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1870e969-72b7-407c-9ccc-4158934b48d8" name="Changes" comment="Working history matplotlib prototype">
+    <list default="true" id="1870e969-72b7-407c-9ccc-4158934b48d8" name="Changes" comment="Working history plotly, semi-working sensor config">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/main_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui/tabs/config_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/config_tab.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui/tabs/history_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/history_tab.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui/tabs/live_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/live_tab.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui/tabs/settings_tab.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/tabs/settings_tab.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/serial_io/connection.py" beforeDir="false" afterPath="$PROJECT_DIR$/serial_io/connection.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/serial_io/worker.py" beforeDir="false" afterPath="$PROJECT_DIR$/serial_io/worker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/logger.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -186,7 +194,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745238925037</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="Working history plotly, semi-working sensor config">
+      <option name="closed" value="true" />
+      <created>1745249197509</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1745249197509</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -198,6 +214,7 @@
     <MESSAGE value="Rollback to working version" />
     <MESSAGE value="Semi-working history and sensor config" />
     <MESSAGE value="Working history matplotlib prototype" />
-    <option name="LAST_COMMIT_MESSAGE" value="Working history matplotlib prototype" />
+    <MESSAGE value="Working history plotly, semi-working sensor config" />
+    <option name="LAST_COMMIT_MESSAGE" value="Working history plotly, semi-working sensor config" />
   </component>
 </project>
